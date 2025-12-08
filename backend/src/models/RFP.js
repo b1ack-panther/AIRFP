@@ -1,16 +1,12 @@
 const mongoose = require("mongoose");
 
-const ComparisonColumnSchema = new mongoose.Schema(
+const RequirementSchema = new mongoose.Schema(
 	{
-		key: { type: String, required: true }, // e.g. total_cost
-		label: { type: String, required: true }, // e.g. Total Cost
-		type: {
-			type: String,
-			enum: ["number", "text", "days", "months", "currency"],
-			default: "text",
-		},
-		unit: { type: String }, // USD, days, months
-		required: { type: Boolean, default: false },
+		item: { type: String, required: true },
+		quantity: { type: String, required: true }, // e.g. "50 units", "100 hours"
+		budget: { type: Number, default: null }, // Target budget per item if available
+		specifications: { type: String, default: "" },
+		warranty: { type: String, default: null }, // e.g. "1 year"
 	},
 	{ _id: false }
 );
@@ -27,12 +23,14 @@ const RfpSchema = new mongoose.Schema(
 
 		status: {
 			type: String,
-			enum: ["DRAFT", "SENT", "RESPONSES", "AWARDED"],
 			default: "DRAFT",
 		},
 
-		// dynamic comparison definition (core of decision making)
-		comparison_columns: [ComparisonColumnSchema],
+		total_budget: { type: Number, default: null },
+		timeline: { type: String, default: null }, // e.g. "Delivery by Q3"
+
+		// specific requirements extracted from prompt
+		requirements: [RequirementSchema],
 
 		// vendors selected for this RFP
 		vendors: [
@@ -41,6 +39,10 @@ const RfpSchema = new mongoose.Schema(
 				ref: "Vendor",
 			},
 		],
+
+		// AI Comparison Result
+		best_vendor_id: { type: mongoose.Schema.Types.ObjectId, ref: "Vendor" },
+		justification: { type: [String], default: [] },
 	},
 	{
 		timestamps: true,

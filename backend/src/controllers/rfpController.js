@@ -5,50 +5,95 @@ const aiService = require("../services/aiService");
 const emailService = require("../services/emailService");
 
 // 1. Create RFP (Trigger AI Architect)
+// 1. Create or Update RFP (Trigger AI Architect)
 exports.createRfp = async (req, res) => {
 	try {
-		const { prompt } = req.body;
+		const { prompt, rfpId } = req.body; // Support both naming conventions
+
 		if (!prompt) return res.status(400).json({ error: "Prompt is required" });
 
-		// 1. Call Gemini to structure the data
-		// CHANGE: Updated method name to match your new AI service
-		const aiResponse = await aiService.generateRfpData(prompt);
+		let currentData = null;
+		let rfp = null;
 
-		// 2. Create DB Entry
-		// CHANGE: Removed budget/currency/deadline fields.
-		// They are now dynamic rows inside 'comparison_columns' with 'target_value'.
-		const rfp = new RFP({
-			title: aiResponse.title,
-			original_prompt: prompt,
-			comparison_columns: aiResponse.comparison_columns,
-			status: "DRAFT",
-		});
+		if (rfpId) {
+			rfp = await RFP.findById(rfpId);
+			if (!rfp) return res.status(404).json({ error: "RFP not found" });
+
+			if (rfp.status !== "DRAFT") {
+				return res
+					.status(400)
+					.json({ error: "Only DRAFT RFPs can be refined" });
+			}
+			currentData = {
+				title: rfp.title,
+				total_budget: rfp.total_budget,
+				timeline: rfp.timeline,
+				requirements: rfp.requirements,
+			};
+		}
+
+		// 1. Call Gemini to structure the data (with context if updating)
+		console.log(currentData, prompt)
+		const aiResponse = await aiService.generateRfpData(prompt, currentData);
+		console.log(aiResponse);
+		// 2. Create or Update DB Entry
+		if (rfp) {
+			// Update existing RFP
+			rfp.title = aiResponse.title;
+			rfp.requirements = aiResponse.requirements;
+			rfp.total_budget = aiResponse.total_budget;
+			rfp.timeline = aiResponse.timeline;
+		} else {
+			// Create new RFP
+			rfp = new RFP({
+				title: aiResponse.title,
+				original_prompt: prompt,
+				requirements: aiResponse.requirements,
+				total_budget: aiResponse.total_budget,
+				timeline: aiResponse.timeline,
+				status: "DRAFT",
+			});
+		}
 
 		await rfp.save();
 		res.status(201).json(rfp);
 	} catch (err) {
 		console.error(err);
-		res.status(500).json({ error: "Failed to create RFP" });
+		res.status(500).json({ error: "Failed to create/update RFP" });
 	}
 };
 
-// 2. Send RFP to Vendors
+// 2a. Get Single RFP
+exports.getRfp = async (req, res) => {
+	try {
+		const { id } = req.params;
+		const rfp = await RFP.findById(id);
+		if (!rfp) return res.status(404).json({ error: "RFP not found" });
+		res.json(rfp);
+	} catch (err) {
+		res.status(500).json({ error: err.message });
+	}
+};
+
+// 2b. Send RFP to Vendors
 exports.sendRfp = async (req, res) => {
 	try {
 		const { id } = req.params;
-		const { vendorIds } = req.body;
+		let { vendorIds } = req.body;
 
 		const rfp = await RFP.findById(id);
 		if (!rfp) return res.status(404).json({ error: "RFP not found" });
 
+		console.log(vendorIds)
+		vendorIds = vendorIds.filter(id => !rfp.vendors.includes(id));
+		console.log(vendorIds)
 		const vendors = await Vendor.find({ _id: { $in: vendorIds } });
-
+		console.log(vendors)
 		if (vendors.length === 0) {
 			return res.status(400).json({ error: "No valid vendors selected" });
 		}
 
-		// CHANGE: Update the RFP with selected vendors so we know who participated
-		rfp.vendors = vendors.map((v) => v._id);
+		rfp.vendors.push(...vendorIds);
 		await emailService.sendRfpEmails(rfp, vendors);
 		rfp.status = "SENT";
 		await rfp.save();
@@ -76,7 +121,7 @@ exports.getRfpProposals = async (req, res) => {
 
 		res.json({
 			meta: rfp,
-			columns: rfp.comparison_columns,
+			requirements: rfp.requirements,
 			proposals: proposals,
 		});
 	} catch (err) {
@@ -91,29 +136,6 @@ exports.getAllRfps = async (req, res) => {
 		res.json(rfps);
 	} catch (err) {
 		res.status(500).json({ error: err.message });
-	}
-};
-
-// 5. Seed Data Helper & Get Vendors
-exports.seedVendors = async () => {
-	try {
-		// Clear existing to avoid duplicates in demo
-		await Vendor.deleteMany({});
-
-		await Vendor.create([
-			{
-				name: "Tech Corp",
-				email: "saurabh0332vns@gmail.com", // Keeping your test email
-				category: "Electronics",
-			},
-			{
-				name: "Global Solutions",
-				email: "ssbs8604vns@gmail.com",
-				category: "Software",
-			},
-		]);
-	} catch (err) {
-		console.log(err);
 	}
 };
 
@@ -135,5 +157,30 @@ exports.triggerEmailCheck = async (req, res) => {
 	} catch (error) {
 		console.error(error);
 		res.status(500).json({ error: "Failed to check emails" });
+	}
+};
+
+// 7. Refine RFP (Draft -> Draft)
+exports.refineRfp = async (req, res) => {
+	try {
+		const { id } = req.params;
+		const { prompt } = req.body;
+
+		if (!prompt) return res.status(400).json({ error: "Prompt is required" });
+
+		// Call AI with context
+		const aiResponse = await aiService.generateRfpData(prompt, currentData);
+
+		// Update fields
+		rfp.title = aiResponse.title;
+		rfp.requirements = aiResponse.requirements;
+		rfp.total_budget = aiResponse.total_budget;
+		// Don't change status, remains DRAFT
+
+		await rfp.save();
+		res.json(rfp);
+	} catch (err) {
+		console.error("Refine Error:", err);
+		res.status(500).json({ error: "Failed to refine RFP" });
 	}
 };
