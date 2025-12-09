@@ -1,12 +1,10 @@
 const Proposal = require("../models/Proposal");
 const RFP = require("../models/RFP");
 
-// Get all proposals for a specific RFP
 exports.getProposalsByRfpId = async (req, res) => {
 	try {
 		const { id } = req.params;
 
-		// Verify RFP exists
 		const rfp = await RFP.findById(id);
 		if (!rfp) {
 			return res.status(404).json({ error: "RFP not found" });
@@ -16,7 +14,6 @@ exports.getProposalsByRfpId = async (req, res) => {
 			.populate("vendor", "name email category")
 			.sort({ received_at: -1 });
 
-		// Calculate total cost for each proposal dynamically
 		const proposalsWithStats = proposals.map((p) => {
 			const pObj = p.toObject();
 			const totalCost = p.extracted_data.reduce(
@@ -36,7 +33,6 @@ exports.getProposalsByRfpId = async (req, res) => {
 	}
 };
 
-// Get a single proposal by ID
 exports.getProposalById = async (req, res) => {
 	try {
 		const { id } = req.params;

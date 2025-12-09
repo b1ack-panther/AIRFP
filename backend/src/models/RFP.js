@@ -3,10 +3,10 @@ const mongoose = require("mongoose");
 const RequirementSchema = new mongoose.Schema(
 	{
 		item: { type: String, required: true },
-		quantity: { type: String, required: true }, // e.g. "50 units", "100 hours"
-		budget: { type: Number, default: null }, // Target budget per item if available
+		quantity: { type: String, required: true },
+		budget: { type: Number, default: null },
 		specifications: { type: String, default: "" },
-		warranty: { type: String, default: null }, // e.g. "1 year"
+		warranty: { type: String, default: null },
 	},
 	{ _id: false }
 );
@@ -15,10 +15,8 @@ const RfpSchema = new mongoose.Schema(
 	{
 		title: { type: String, required: true },
 
-		// user’s raw input (prompt for AI)
 		original_prompt: { type: String, required: true },
 
-		// AI-generated email content
 		mail_body: { type: String },
 
 		status: {
@@ -27,12 +25,10 @@ const RfpSchema = new mongoose.Schema(
 		},
 
 		total_budget: { type: Number, default: null },
-		timeline: { type: String, default: null }, // e.g. "Delivery by Q3"
+		timeline: { type: String, default: null },
 
-		// specific requirements extracted from prompt
 		requirements: [RequirementSchema],
 
-		// vendors selected for this RFP
 		vendors: [
 			{
 				type: mongoose.Schema.Types.ObjectId,
@@ -40,7 +36,6 @@ const RfpSchema = new mongoose.Schema(
 			},
 		],
 
-		// AI Comparison Result
 		best_vendor_id: { type: mongoose.Schema.Types.ObjectId, ref: "Vendor" },
 		justification: { type: [String], default: [] },
 	},

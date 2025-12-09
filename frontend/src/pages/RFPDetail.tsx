@@ -24,7 +24,6 @@ const RFPDetail = () => {
 	const [vendors, setVendors] = useState<Vendor[]>([]);
 	const [loading, setLoading] = useState(true);
 
-	// State for modal
 	const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
 	const [vendorSearch, setVendorSearch] = useState("");
 	const [selectedVendorIds, setSelectedVendorIds] = useState<string[]>([]);
@@ -53,10 +52,10 @@ const RFPDetail = () => {
 					deliveryTimeline: rfpData.timeline,
 					warranty: rfpData.requirements.find((r: any) => r.warranty)?.warranty,
 					vendorCount: rfpData.vendors?.length || 0,
-					vendors: rfpData.vendors || [], // IDs of sent vendors
+					vendors: rfpData.vendors || [],
 				});
 				setVendors(vendorsData);
-				// Initialize selected vendors based on already sent ones
+
 				if (rfpData.vendors) {
 					setSelectedVendorIds(rfpData.vendors);
 				}
@@ -83,7 +82,6 @@ const RFPDetail = () => {
 	const handleSendRFP = async () => {
 		setSending(true);
 		try {
-			// Filter out already sent vendors to find new ones
 			const initialVendorIds = rfp.vendors || [];
 			const newVendorIds = selectedVendorIds.filter(
 				(id) => !initialVendorIds.includes(id)
@@ -91,7 +89,7 @@ const RFPDetail = () => {
 
 			if (newVendorIds.length > 0) {
 				await api.sendRFP(id!, newVendorIds);
-				// Refresh data
+
 				const updatedRfp = await api.getRFP(id!);
 				setRfp((prev) => ({
 					...prev,
@@ -127,7 +125,6 @@ const RFPDetail = () => {
 
 	return (
 		<div className="page-container animate-fade-in relative">
-			{/* Back button and header */}
 			<div className="mb-6">
 				<Link
 					to="/"
@@ -152,7 +149,6 @@ const RFPDetail = () => {
 						</div>
 					</div>
 
-					{/* Action Buttons */}
 					<div className="flex flex-wrap gap-3">
 						<button
 							onClick={() => setIsVendorModalOpen(true)}
@@ -179,9 +175,7 @@ const RFPDetail = () => {
 				</div>
 			</div>
 
-			{/* Main Content - RFP Summary */}
 			<div className="lg:col-span-2 space-y-6">
-				{/* Description */}
 				{rfp.description && (
 					<div className="card-elevated p-6">
 						<h2 className="font-semibold text-foreground mb-3">Description</h2>
@@ -189,7 +183,6 @@ const RFPDetail = () => {
 					</div>
 				)}
 
-				{/* Items */}
 				{rfp.items && rfp.items.length > 0 && (
 					<div className="card-elevated p-6">
 						<div className="flex items-center gap-2 mb-4">
@@ -227,7 +220,6 @@ const RFPDetail = () => {
 					</div>
 				)}
 
-				{/* Terms Grid */}
 				<div className="grid sm:grid-cols-2 gap-4">
 					{rfp.budget && (
 						<div className="card-elevated p-4">
@@ -283,7 +275,6 @@ const RFPDetail = () => {
 				</div>
 			</div>
 
-			{/* Vendor Selection Modal */}
 			{isVendorModalOpen && (
 				<div className="fixed inset-0 z-50 flex items-center justify-center p-4">
 					<div
@@ -291,7 +282,6 @@ const RFPDetail = () => {
 						onClick={() => setIsVendorModalOpen(false)}
 					/>
 					<div className="relative w-full max-w-2xl bg-card rounded-xl border border-border shadow-lg animate-fade-in flex flex-col max-h-[85vh]">
-						{/* Modal Header */}
 						<div className="flex items-center justify-between p-6 border-b border-border">
 							<div>
 								<h2 className="text-lg font-semibold text-foreground">
@@ -309,7 +299,6 @@ const RFPDetail = () => {
 							</button>
 						</div>
 
-						{/* Search */}
 						<div className="p-4 border-b border-border bg-muted/30">
 							<div className="relative">
 								<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -323,7 +312,6 @@ const RFPDetail = () => {
 							</div>
 						</div>
 
-						{/* Vendor List */}
 						<div className="flex-1 overflow-y-auto p-2">
 							{filteredVendors.map((vendor) => {
 								const isSelected = selectedVendorIds.includes(vendor.id);
@@ -395,7 +383,6 @@ const RFPDetail = () => {
 							)}
 						</div>
 
-						{/* Footer */}
 						<div className="p-4 border-t border-border bg-muted/30 flex justify-between items-center">
 							<span className="text-sm text-muted-foreground">
 								{

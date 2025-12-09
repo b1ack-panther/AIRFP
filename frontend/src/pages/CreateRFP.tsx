@@ -1,12 +1,3 @@
-/**
- * Create RFP Screen (CreateRFP.tsx)
- * Purpose: Convert natural language input into structured RFP using AI
- *
- * Layout: Two-column
- * - Left: Chat interface for natural language input
- * - Right: Structured RFP preview (read-only)
- */
-
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
@@ -40,10 +31,9 @@ const CreateRFP = () => {
 				"Hello! I'm your AI procurement assistant. Describe what you need to procure, and I'll help you create a structured RFP.\n\nFor example: \"I need 50 laptops for our engineering team with 16GB RAM and 512GB SSD, delivery within 30 days, budget around $100,000\"",
 		},
 	]);
-	const [structuredRFP, setStructuredRFP] = useState<any>(null); // Use backend shape or map
+	const [structuredRFP, setStructuredRFP] = useState<any>(null);
 	const [isGenerating, setIsGenerating] = useState(false);
 
-	// Fetch existing RFP if ID is present
 	useEffect(() => {
 		const fetchRFP = async () => {
 			if (id) {
@@ -94,14 +84,12 @@ const CreateRFP = () => {
 			let updatedRfp;
 			let aiMessageContent = "";
 
-			// Payload includes ID if known
 			const payload = id
 				? { prompt: userMessage.content, rfpId: id }
 				: { prompt: userMessage.content };
 
 			updatedRfp = await api.createRFP(payload);
 
-			// If this was a new creation, update URL
 			if (!id && updatedRfp._id) {
 				navigate(`/create-rfp/${updatedRfp._id}`, { replace: true });
 			}
@@ -140,9 +128,7 @@ const CreateRFP = () => {
 
 	return (
 		<div className="h-[calc(100vh-4rem)] flex animate-fade-in">
-			{/* Left Column - Chat Interface */}
 			<div className="flex-1 flex flex-col border-r border-border">
-				{/* Chat Header */}
 				<div className="flex items-center gap-3 px-6 py-4 border-b border-border bg-card">
 					<div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
 						<Sparkles className="h-5 w-5 text-primary" />
@@ -155,7 +141,6 @@ const CreateRFP = () => {
 					</div>
 				</div>
 
-				{/* Messages */}
 				<div className="flex-1 overflow-y-auto p-6 space-y-4">
 					{messages.map((message) => (
 						<div
@@ -202,7 +187,6 @@ const CreateRFP = () => {
 					)}
 				</div>
 
-				{/* Input */}
 				<form
 					onSubmit={handleSubmit}
 					className="p-4 border-t border-border bg-card"
@@ -232,9 +216,7 @@ const CreateRFP = () => {
 				</form>
 			</div>
 
-			{/* Right Column - Structured RFP Preview */}
 			<div className="hidden lg:flex lg:w-[480px] flex-col bg-muted/30">
-				{/* Preview Header */}
 				<div className="px-6 py-4 border-b border-border bg-card">
 					<h2 className="font-semibold text-foreground">
 						Structured RFP Preview
@@ -244,11 +226,9 @@ const CreateRFP = () => {
 					</p>
 				</div>
 
-				{/* Preview Content */}
 				<div className="flex-1 overflow-y-auto p-6">
 					{structuredRFP ? (
 						<div className="space-y-6 animate-fade-in">
-							{/* Items */}
 							<div className="card-elevated p-4">
 								<div className="flex items-center gap-2 mb-3">
 									<Package className="h-4 w-4 text-primary" />
@@ -266,7 +246,6 @@ const CreateRFP = () => {
 								</div>
 							</div>
 
-							{/* Budget */}
 							<div className="card-elevated p-4">
 								<div className="flex items-center gap-2 mb-2">
 									<DollarSign className="h-4 w-4 text-primary" />
@@ -277,7 +256,6 @@ const CreateRFP = () => {
 								</p>
 							</div>
 
-							{/* Delivery Timeline */}
 							<div className="card-elevated p-4">
 								<div className="flex items-center gap-2 mb-2">
 									<Truck className="h-4 w-4 text-primary" />
@@ -306,7 +284,6 @@ const CreateRFP = () => {
 					)}
 				</div>
 
-				{/* Confirm Button */}
 				{structuredRFP && (
 					<div className="p-4 border-t border-border bg-card">
 						<button

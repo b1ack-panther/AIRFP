@@ -1,9 +1,8 @@
 import axios from "axios";
 
-// TypeScript Interfaces
 export interface Vendor {
-	_id: string; // MongoDB ID
-	id?: string; // For compatibility if needed
+	_id: string;
+	id?: string;
 	name: string;
 	email: string;
 	category: string;
@@ -15,7 +14,7 @@ export interface RFP {
 	_id: string;
 	id?: string;
 	title: string;
-	name?: string; // Frontend alias
+	name?: string;
 	description?: string;
 	original_prompt?: string;
 	status:
@@ -28,13 +27,13 @@ export interface RFP {
 		| "needs-review";
 	requirements: any[];
 	total_budget?: number;
-	budget?: string; // For frontend compatibility
+	budget?: string;
 	timeline?: string;
-	deliveryTimeline?: string; // For frontend compatibility
+	deliveryTimeline?: string;
 	warranty?: string;
 	createdAt: string;
 	updatedAt: string;
-	lastUpdated?: string; // Frontend alias
+	lastUpdated?: string;
 	vendors?: string[];
 	vendorCount?: number;
 	best_vendor_id?: string;
@@ -66,10 +65,9 @@ export interface Proposal {
 const API_URL = "http://localhost:5000/api";
 
 export const api = {
-	// RFP Methods
 	getAllRFPs: async (): Promise<RFP[]> => {
 		const response = await axios.get(`${API_URL}/rfps`);
-		// Transform backend data to frontend model if necessary
+
 		return response.data.map((rfp: any) => ({
 			...rfp,
 			id: rfp._id,
@@ -86,8 +84,8 @@ export const api = {
 					req.total_price ||
 					(req.budget && !isNaN(parseFloat(req.quantity))
 						? req.budget * parseFloat(req.quantity)
-						: 0), // Estimate if missing
-				warranty: req.warranty || rfp.warranty || "", // Fallback to global warranty if item's is missing
+						: 0),
+				warranty: req.warranty || rfp.warranty || "",
 			})),
 			description: rfp.original_prompt,
 			deliveryTimeline: rfp.timeline,

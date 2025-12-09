@@ -8,18 +8,17 @@ const ProposalSchema = new mongoose.Schema({
 		required: true,
 	},
 	received_at: { type: Date, default: Date.now },
-	// DYNAMIC DATA: Stores whatever the AI extracted based on the RFP columns
 	extracted_data: [
 		{
 			item: String,
 			quantity: String,
-			price: Number, // Total price for this line item
+			price: Number,
 			warranty: String,
 			specifications: String,
 		},
 	],
-    compliance: Number,
-    timeline: String,
+	compliance: Number,
+	timeline: String,
 });
 
 module.exports = mongoose.model("Proposal", ProposalSchema);

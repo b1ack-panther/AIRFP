@@ -6,7 +6,6 @@ const Proposal = require("../models/Proposal");
 const aiService = require("./aiService");
 const Vendor = require("../models/Vendor");
 
-// --- SENDER CONFIG ---
 const transporter = nodemailer.createTransport({
 	host: process.env.SMTP_HOST,
 	port: process.env.SMTP_PORT,
@@ -17,7 +16,6 @@ const transporter = nodemailer.createTransport({
 	},
 });
 
-// --- RECEIVER CONFIG (IMAP) ---
 const imapConfig = {
 	imap: {
 		user: process.env.EMAIL_USER,
@@ -30,9 +28,6 @@ const imapConfig = {
 	},
 };
 
-/**
- * Sends RFP emails to a list of vendors
- */
 exports.sendRfpEmails = async (rfp, vendors) => {
 	const subject = `RFP Invitation: ${rfp.title} [Ref:${rfp._id}]`;
 	const body = `Dear Vendor,\n\nWe are inviting you to submit a proposal.\n\nRequirements:\n${rfp.original_prompt}\n\nPlease reply to this email with your quote.`;
@@ -50,11 +45,8 @@ exports.sendRfpEmails = async (rfp, vendors) => {
 	console.log(`Sent emails to ${vendors.length} vendors.`);
 };
 
-/**
- * Connects to IMAP, checks for UNSEEN emails, and parses them
- */
 exports.checkInboxForResponses = async () => {
-	console.log("📥 Checking Inbox for Vendor Responses...");
+	console.log("Checking Inbox for Vendor Responses...");
 
 	imaps
 		.connect(imapConfig)
@@ -98,20 +90,16 @@ exports.checkInboxForResponses = async () => {
 								const match = subject.match(/\[Ref:([a-f0-9]{24})\]/);
 								if (match && match[1]) {
 									const rfpId = match[1];
-									console.log(
-										`🔎 Found reply for RFP ID: ${rfpId} from ${from}`
-									);
+									console.log(`Found reply for RFP ID: ${rfpId} from ${from}`);
 
 									const rfp = await RFP.findById(rfpId);
 									if (rfp) {
-										console.log("🤖 Parsing email content with Gemini...");
+										console.log("Parsing email content with Gemini...");
 										const extractedData = await aiService.extractProposalData(
 											textBody,
 											rfp.requirements
 										);
 
-										// Resolve Vendor
-										// 'from' might be "Name <email@example.com>" or just "email@example.com"
 										const emailMatch = from.match(/<(.+)>/) || [null, from];
 										const cleanEmail = emailMatch[1]
 											? emailMatch[1].trim()
@@ -119,8 +107,6 @@ exports.checkInboxForResponses = async () => {
 
 										const vendor = await Vendor.findOne({ email: cleanEmail });
 
-										// extractedData is { extracted_data: [...], compliance: ... }
-										// Proposal schema expects extracted_data to be the array, and compliance separte.
 										if (vendor) {
 											await Proposal.create({
 												rfp: rfp._id,
@@ -134,21 +120,19 @@ exports.checkInboxForResponses = async () => {
 												rfp.status = "responses";
 												await rfp.save();
 											}
-											console.log("✅ Proposal Saved to Database!");
+											console.log("Proposal Saved to Database!");
 
-											// --- AI Comparison Trigger ---
 											const proposalCount = await Proposal.countDocuments({
 												rfp: rfp._id,
 											});
 											if (proposalCount >= 2) {
 												console.log(
-													`⚖️  Triggering AI Comparison for ${proposalCount} proposals...`
+													`Triggering AI Comparison for ${proposalCount} proposals...`
 												);
 												const allProposals = await Proposal.find({
 													rfp: rfp._id,
 												}).populate("vendor");
 
-												// Prepare data for AI
 												const proposalsData = allProposals.map((p) => ({
 													vendor_email: p.vendor.email,
 													total_cost: p.extracted_data.reduce(
@@ -191,7 +175,7 @@ exports.checkInboxForResponses = async () => {
 											}
 										} else {
 											console.log(
-												`⚠️ Vendor not found for email: ${cleanEmail}. Skipping proposal.`
+												`Vendor not found for email: ${cleanEmail}. Skipping proposal.`
 											);
 										}
 									}

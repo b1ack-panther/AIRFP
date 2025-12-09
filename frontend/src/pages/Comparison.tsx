@@ -40,23 +40,16 @@ const Comparison = () => {
 		loadData();
 	}, [id]);
 
-	// Filter only parsed proposals with data
-
-	// Helper to get total cost if not directly on object
 	const getProposalCost = (p: Proposal) =>
 		p.extracted_data.reduce((sum, item) => sum + item.price, 0);
 
-	// Recommendation logic: Lowest Cost with acceptable compliance (>70%)
-	// If no compliances available, just cost.
 	const sortedByValue = [...proposals].sort((a, b) => {
 		const costA = getProposalCost(a);
 		const costB = getProposalCost(b);
 
-		// If cost is significantly different (>10%), prioritize cost
 		const costDiff = (costA - costB) / Math.min(costA, costB);
 		if (Math.abs(costDiff) > 0.1) return costA - costB;
 
-		// Otherwise prioritize compliance
 		return (b.compliance || 0) - (a.compliance || 0);
 	});
 
@@ -104,7 +97,6 @@ const Comparison = () => {
 
 	return (
 		<div className="page-container animate-fade-in">
-			{/* Back button and header */}
 			<div className="mb-6">
 				<Link
 					to={`/rfp/${id}/proposals`}
@@ -128,7 +120,6 @@ const Comparison = () => {
 			</div>
 
 			<div>
-				{/* Main Content - Comparison Table */}
 				{proposals.length === 0 ? (
 					<div className="card-elevated p-8 text-center text-muted-foreground">
 						Not enough data to compare. Wait for more proposals to be parsed.
@@ -159,7 +150,7 @@ const Comparison = () => {
 										const isRecommended =
 											proposal._id === recommendedVendor?._id ||
 											proposal._id === recommendedVendor?._id;
-										// _id check
+
 										const cost = getProposalCost(proposal);
 
 										return (
@@ -202,7 +193,6 @@ const Comparison = () => {
 												</td>
 												<td className="px-6 py-4 text-right">
 													<div className="flex items-center justify-end gap-2">
-														{/* Disabled numeric check for timeline string */}
 														<Clock className="h-4 w-4 text-muted-foreground/50" />
 														<span className="font-medium text-foreground">
 															{proposal.timeline || "-"}
@@ -241,7 +231,6 @@ const Comparison = () => {
 			</div>
 			{selectedProposal && (
 				<>
-					{/* Selected Vendor Card */}
 					<div className="card-elevated p-4 mt-6 border-2 border-status-awarded/30">
 						<div className="flex items-center gap-2 text-status-awarded mb-4">
 							<Trophy className="h-5 w-5" />

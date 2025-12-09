@@ -112,7 +112,6 @@ exports.generateRfpData = async (userPrompt, currentData = null) => {
 };
 
 exports.extractProposalData = async (emailText, requirements) => {
-	// Dynamically build prompt based on requirements
 	const requirementsList = requirements
 		.map((req) => `- Item: ${req.item} (Qty: ${req.quantity})`)
 		.join("\n");
@@ -184,10 +183,6 @@ exports.extractProposalData = async (emailText, requirements) => {
 	return JSON.parse(response.candidates[0].content.parts[0].text);
 };
 
-/**
- * Stage 3: The Judge
- * Compares proposals against RFP requirements.
- */
 exports.compareProposals = async (rfpData, proposalsData) => {
 	const schema = {
 		type: SchemaType.OBJECT,

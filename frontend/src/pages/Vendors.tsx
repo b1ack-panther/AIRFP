@@ -1,13 +1,3 @@
-/**
- * Vendor Management Screen (Vendors.tsx)
- * Purpose: Manage vendor master data
- *
- * Features:
- * - Vendor table with Name, Email, Category
- * - Add Vendor modal/form
- * - Edit/Delete buttons
- */
-
 import { useState, useEffect } from "react";
 import {
 	Plus,
@@ -87,7 +77,7 @@ const Vendors = () => {
 			} else {
 				await api.createVendor(formData);
 			}
-			await fetchVendors(); // Refresh list
+			await fetchVendors();
 			handleCloseModal();
 		} catch (error) {
 			console.error("Failed to save vendor", error);
@@ -98,7 +88,7 @@ const Vendors = () => {
 	const handleDelete = async (vendorId: string) => {
 		try {
 			await api.deleteVendor(vendorId);
-			await fetchVendors(); // Refresh list
+			await fetchVendors();
 		} catch (error) {
 			console.error("Failed to delete vendor", error);
 			alert("Failed to delete vendor");
@@ -114,7 +104,6 @@ const Vendors = () => {
 
 	return (
 		<div className="page-container animate-fade-in">
-			{/* Header */}
 			<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
 				<div>
 					<h1 className="page-title mb-1">Vendors</h1>
@@ -129,7 +118,6 @@ const Vendors = () => {
 				</button>
 			</div>
 
-			{/* Vendors Table */}
 			<div className="card-elevated overflow-hidden">
 				<div className="overflow-x-auto">
 					<table className="w-full">
@@ -207,7 +195,6 @@ const Vendors = () => {
 				</div>
 			</div>
 
-			{/* Modal */}
 			{isModalOpen && (
 				<div className="fixed inset-0 z-50 flex items-center justify-center p-4">
 					<div

@@ -1,6 +1,5 @@
 const Vendor = require("../models/Vendor");
 
-// Get all vendors (with optional search)
 exports.getAllVendors = async (req, res) => {
 	try {
 		const { search } = req.query;
@@ -23,12 +22,10 @@ exports.getAllVendors = async (req, res) => {
 	}
 };
 
-// Create a new vendor
 exports.createVendor = async (req, res) => {
 	try {
 		const { name, email, category, phone, address } = req.body;
 
-		// Check if email already exists
 		const existingVendor = await Vendor.findOne({ email });
 		if (existingVendor) {
 			return res
@@ -51,7 +48,6 @@ exports.createVendor = async (req, res) => {
 	}
 };
 
-// Update a vendor
 exports.updateVendor = async (req, res) => {
 	try {
 		const { id } = req.params;
@@ -69,7 +65,6 @@ exports.updateVendor = async (req, res) => {
 	}
 };
 
-// Delete a vendor
 exports.deleteVendor = async (req, res) => {
 	try {
 		const { id } = req.params;

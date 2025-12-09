@@ -1,8 +1,3 @@
-/**
- * Layout Component
- * Main application layout with sidebar navigation and top navbar
- */
-
 import { ReactNode, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
@@ -38,14 +33,12 @@ const Layout = ({ children }: LayoutProps) => {
 				/>
 			)}
 
-			{/* Sidebar */}
 			<aside
 				className={cn(
 					"fixed inset-y-0 left-0 z-50 w-64 bg-sidebar transform transition-transform duration-200 ease-in-out lg:translate-x-0",
 					sidebarOpen ? "translate-x-0" : "-translate-x-full"
 				)}
 			>
-				{/* Logo */}
 				<div className="flex h-16 items-center gap-3 px-6 border-b border-sidebar-border">
 					<div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sidebar-primary">
 						<Sparkles className="h-5 w-5 text-sidebar-primary-foreground" />
@@ -58,7 +51,6 @@ const Layout = ({ children }: LayoutProps) => {
 					</div>
 				</div>
 
-				{/* Navigation */}
 				<nav className="flex-1 px-3 py-4 space-y-1">
 					{navigation.map((item) => {
 						const isActive = location.pathname === item.href;
@@ -84,7 +76,6 @@ const Layout = ({ children }: LayoutProps) => {
 					})}
 				</nav>
 
-				{/* Sidebar footer */}
 				<div className="p-4 border-t border-sidebar-border">
 					<div className="flex items-center gap-3 px-2">
 						<div className="h-8 w-8 rounded-full bg-sidebar-accent flex items-center justify-center">

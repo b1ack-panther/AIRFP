@@ -1,13 +1,3 @@
-/**
- * Proposals List Screen (Proposals.tsx)
- * Purpose: Show received vendor responses for an RFP
- *
- * Features:
- * - List of proposals by vendor
- * - Status: Processing, Parsed, Needs Review
- * - Click proposal → Proposal Detail screen
- */
-
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import {
@@ -83,7 +73,6 @@ const Proposals = () => {
 
 	return (
 		<div className="page-container animate-fade-in">
-			{/* Back button and header */}
 			<div className="mb-6">
 				<Link
 					to={`/rfp/${id}`}
@@ -118,10 +107,8 @@ const Proposals = () => {
 				</div>
 			</div>
 
-			{/* Proposals List */}
 			<div className="space-y-4">
 				{proposals.map((proposal, index) => {
-					// Derive status if missing (backend might not store it on Proposal yet)
 					const status = "parsed";
 
 					return (
@@ -152,7 +139,6 @@ const Proposals = () => {
 									</div>
 								</div>
 
-								{/* Parsed data preview */}
 								{status === "parsed" && (
 									<div className="mt-4 pt-4 border-t border-border grid grid-cols-2 sm:grid-cols-4 gap-4">
 										<div className="flex items-center gap-2">

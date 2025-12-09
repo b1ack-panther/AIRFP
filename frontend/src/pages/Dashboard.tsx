@@ -39,7 +39,6 @@ const Dashboard = () => {
 
 	return (
 		<div className="page-container animate-fade-in">
-			{/* Header */}
 			<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
 				<div>
 					<h1 className="page-title mb-1">My RFPs</h1>
@@ -56,7 +55,6 @@ const Dashboard = () => {
 				</Link>
 			</div>
 
-			{/* Stats Overview */}
 			<div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
 				{[
 					{
@@ -76,11 +74,6 @@ const Dashboard = () => {
 						).length,
 						color: "text-status-sent",
 					},
-					// {
-					// 	label: "Awarded",
-					// 	value: recentRFPs.filter((r) => r.status === "awarded").length,
-					// 	color: "text-status-awarded",
-					// },
 				].map((stat, i) => (
 					<div key={i} className="card-elevated p-4">
 						<p className="text-sm text-muted-foreground">{stat.label}</p>
@@ -91,9 +84,7 @@ const Dashboard = () => {
 				))}
 			</div>
 
-			{/* RFP List */}
 			<div className="card-elevated overflow-hidden">
-				{/* Table Header */}
 				<div className="hidden md:grid md:grid-cols-12 gap-4 px-6 py-3 bg-muted/50 border-b border-border">
 					<div className="col-span-5 table-header">RFP Name</div>
 					<div className="col-span-2 table-header">Status</div>
@@ -102,7 +93,6 @@ const Dashboard = () => {
 					<div className="col-span-1"></div>
 				</div>
 
-				{/* Table Body */}
 				<div className="divide-y divide-border">
 					{recentRFPs.map((rfp, index) => (
 						<Link
@@ -112,7 +102,6 @@ const Dashboard = () => {
 							style={{ animationDelay: `${index * 50}ms` }}
 						>
 							<div className="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-4 p-4 md:px-6 md:py-4 items-center">
-								{/* RFP Name */}
 								<div className="md:col-span-5 flex items-center gap-3">
 									<div className="flex-shrink-0 h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
 										<FileText className="h-5 w-5 text-primary" />
@@ -127,24 +116,20 @@ const Dashboard = () => {
 									</div>
 								</div>
 
-								{/* Status */}
 								<div className="md:col-span-2">
 									<StatusBadge status={rfp.status} />
 								</div>
 
-								{/* Vendors */}
 								<div className="hidden md:flex md:col-span-2 items-center gap-2 text-sm text-muted-foreground">
 									<Users className="h-4 w-4" />
 									<span>{rfp.vendorCount} vendors</span>
 								</div>
 
-								{/* Last Updated */}
 								<div className="hidden md:flex md:col-span-2 items-center gap-2 text-sm text-muted-foreground">
 									<Calendar className="h-4 w-4" />
 									<span>{rfp.lastUpdated}</span>
 								</div>
 
-								{/* Arrow */}
 								<div className="hidden md:flex md:col-span-1 justify-end">
 									<ChevronRight className="h-5 w-5 text-muted-foreground" />
 								</div>
@@ -153,7 +138,6 @@ const Dashboard = () => {
 					))}
 				</div>
 
-				{/* Empty state (would show if no RFPs) */}
 				{recentRFPs.length === 0 && (
 					<div className="text-center py-12">
 						<FileText className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />

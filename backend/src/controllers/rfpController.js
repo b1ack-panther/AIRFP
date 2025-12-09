@@ -4,11 +4,9 @@ const Proposal = require("../models/Proposal");
 const aiService = require("../services/aiService");
 const emailService = require("../services/emailService");
 
-// 1. Create RFP (Trigger AI Architect)
-// 1. Create or Update RFP (Trigger AI Architect)
 exports.createRfp = async (req, res) => {
 	try {
-		const { prompt, rfpId } = req.body; // Support both naming conventions
+		const { prompt, rfpId } = req.body;
 
 		if (!prompt) return res.status(400).json({ error: "Prompt is required" });
 
@@ -32,19 +30,14 @@ exports.createRfp = async (req, res) => {
 			};
 		}
 
-		// 1. Call Gemini to structure the data (with context if updating)
-		console.log(currentData, prompt)
 		const aiResponse = await aiService.generateRfpData(prompt, currentData);
-		console.log(aiResponse);
-		// 2. Create or Update DB Entry
+
 		if (rfp) {
-			// Update existing RFP
 			rfp.title = aiResponse.title;
 			rfp.requirements = aiResponse.requirements;
 			rfp.total_budget = aiResponse.total_budget;
 			rfp.timeline = aiResponse.timeline;
 		} else {
-			// Create new RFP
 			rfp = new RFP({
 				title: aiResponse.title,
 				original_prompt: prompt,
@@ -63,7 +56,6 @@ exports.createRfp = async (req, res) => {
 	}
 };
 
-// 2a. Get Single RFP
 exports.getRfp = async (req, res) => {
 	try {
 		const { id } = req.params;
@@ -75,7 +67,6 @@ exports.getRfp = async (req, res) => {
 	}
 };
 
-// 2b. Send RFP to Vendors
 exports.sendRfp = async (req, res) => {
 	try {
 		const { id } = req.params;
@@ -84,11 +75,9 @@ exports.sendRfp = async (req, res) => {
 		const rfp = await RFP.findById(id);
 		if (!rfp) return res.status(404).json({ error: "RFP not found" });
 
-		console.log(vendorIds)
-		vendorIds = vendorIds.filter(id => !rfp.vendors.includes(id));
-		console.log(vendorIds)
+		vendorIds = vendorIds.filter((id) => !rfp.vendors.includes(id));
 		const vendors = await Vendor.find({ _id: { $in: vendorIds } });
-		console.log(vendors)
+
 		if (vendors.length === 0) {
 			return res.status(400).json({ error: "No valid vendors selected" });
 		}
@@ -105,15 +94,12 @@ exports.sendRfp = async (req, res) => {
 	}
 };
 
-// 3. Get Dashboard Data (Columns + Proposals)
 exports.getRfpProposals = async (req, res) => {
 	try {
 		const { id } = req.params;
 		const rfp = await RFP.findById(id);
 		if (!rfp) return res.status(404).json({ error: "RFP not found" });
 
-		// CHANGE: Query uses 'rfp' (the ObjectId ref), not 'rfp_id'
-		// Added populate to see Vendor names in the dashboard
 		const proposals = await Proposal.find({ rfp: id }).populate(
 			"vendor",
 			"name email category"
@@ -129,7 +115,6 @@ exports.getRfpProposals = async (req, res) => {
 	}
 };
 
-// 4. Get All RFPs (For Dashboard)
 exports.getAllRfps = async (req, res) => {
 	try {
 		const rfps = await RFP.find().sort({ createdAt: -1 });
@@ -149,7 +134,6 @@ exports.getAllVendors = async (req, res) => {
 	}
 };
 
-// 6. Manual Email Check Trigger
 exports.triggerEmailCheck = async (req, res) => {
 	try {
 		await emailService.checkInboxForResponses();
@@ -160,7 +144,6 @@ exports.triggerEmailCheck = async (req, res) => {
 	}
 };
 
-// 7. Refine RFP (Draft -> Draft)
 exports.refineRfp = async (req, res) => {
 	try {
 		const { id } = req.params;
@@ -168,14 +151,11 @@ exports.refineRfp = async (req, res) => {
 
 		if (!prompt) return res.status(400).json({ error: "Prompt is required" });
 
-		// Call AI with context
 		const aiResponse = await aiService.generateRfpData(prompt, currentData);
 
-		// Update fields
 		rfp.title = aiResponse.title;
 		rfp.requirements = aiResponse.requirements;
 		rfp.total_budget = aiResponse.total_budget;
-		// Don't change status, remains DRAFT
 
 		await rfp.save();
 		res.json(rfp);

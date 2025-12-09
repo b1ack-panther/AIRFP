@@ -11,7 +11,6 @@ import Vendors from "./pages/Vendors";
 import Proposals from "./pages/Proposals";
 import ProposalDetail from "./pages/ProposalDetail";
 import Comparison from "./pages/Comparison";
-import Decision from "./pages/Decision";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,7 +33,6 @@ const App = () => (
 							element={<ProposalDetail />}
 						/>
 						<Route path="/rfp/:id/compare" element={<Comparison />} />
-						<Route path="/rfp/:id/decision" element={<Decision />} />
 						<Route path="/vendors" element={<Vendors />} />
 						<Route path="*" element={<NotFound />} />
 					</Routes>

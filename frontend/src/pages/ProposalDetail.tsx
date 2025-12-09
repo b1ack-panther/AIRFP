@@ -70,7 +70,6 @@ const ProposalDetail = () => {
 		);
 	}
 
-	// Derive status if missing
 	const status = "parsed";
 
 	const totalCost = proposal.extracted_data.reduce(
@@ -80,7 +79,6 @@ const ProposalDetail = () => {
 
 	return (
 		<div className="page-container animate-fade-in">
-			{/* Back button and header */}
 			<div className="mb-6">
 				<Link
 					to={`/rfp/${rfpId}/proposals`}
@@ -119,9 +117,7 @@ const ProposalDetail = () => {
 			</div>
 
 			<div className="grid lg:grid-cols-3 gap-6">
-				{/* Main Content */}
 				<div className="lg:col-span-2 space-y-6">
-					{/* Extracted Data */}
 					<div className="card-elevated p-6">
 						<div className="flex items-center justify-between mb-6">
 							<h2 className="font-semibold text-foreground">
@@ -129,7 +125,6 @@ const ProposalDetail = () => {
 							</h2>
 						</div>
 
-						{/* Key Metrics */}
 						<div className="grid sm:grid-cols-3 gap-4 mb-6">
 							<div className="p-4 rounded-lg bg-muted/50">
 								<div className="flex items-center gap-2 mb-2">
@@ -168,7 +163,6 @@ const ProposalDetail = () => {
 							</div>
 						</div>
 
-						{/* Line Items */}
 						{proposal.extracted_data && proposal.extracted_data.length > 0 && (
 							<div>
 								<h3 className="font-medium text-foreground mb-3">Line Items</h3>
@@ -228,7 +222,6 @@ const ProposalDetail = () => {
 					</div>
 				</div>
 
-				{/* Sidebar - Vendor Info */}
 				<div className="space-y-6">
 					<div className="card-elevated p-6">
 						<h2 className="font-semibold text-foreground mb-4">
