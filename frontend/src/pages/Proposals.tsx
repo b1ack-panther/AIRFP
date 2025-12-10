@@ -10,8 +10,10 @@ import {
 	DollarSign,
 	Truck,
 	BarChart3,
+	RefreshCw,
 } from "lucide-react";
 import { api, RFP, Proposal } from "@/services/api";
+import { toast } from "sonner";
 import StatusBadge from "@/components/ui/StatusBadge";
 
 const Proposals = () => {
@@ -19,6 +21,7 @@ const Proposals = () => {
 	const [rfp, setRfp] = useState<RFP | null>(null);
 	const [proposals, setProposals] = useState<Proposal[]>([]);
 	const [loading, setLoading] = useState(true);
+	const [checkingEmails, setCheckingEmails] = useState(false);
 
 	useEffect(() => {
 		const loadData = async () => {
@@ -32,12 +35,32 @@ const Proposals = () => {
 				setProposals(proposalsData);
 			} catch (error) {
 				console.error("Failed to load proposals data", error);
+				toast.error("Failed to load proposals");
 			} finally {
 				setLoading(false);
 			}
 		};
 		loadData();
 	}, [id]);
+
+	const handleCheckEmails = async () => {
+		setCheckingEmails(true);
+		try {
+			await api.checkEmails();
+			toast.success("Checking emails for new proposals...");
+			// Refresh data after a short delay
+			if (id) {
+				const proposalsData = await api.getProposals(id);
+				setProposals(proposalsData);
+				toast.success("Proposals list updated");
+			}
+		} catch (error) {
+			console.error("Failed to check emails", error);
+			toast.error("Failed to check emails");
+		} finally {
+			setCheckingEmails(false);
+		}
+	};
 
 	const getStatusIcon = (status: string) => {
 		switch (status) {
@@ -47,6 +70,8 @@ const Proposals = () => {
 				return <CheckCircle className="h-5 w-5 text-status-awarded" />;
 			case "needs-review":
 				return <AlertTriangle className="h-5 w-5 text-status-responses" />;
+			case "sent":
+				return <Clock className="h-5 w-5 text-status-sent" />;
 			default:
 				return <FileText className="h-5 w-5 text-muted-foreground" />;
 		}
@@ -89,27 +114,45 @@ const Proposals = () => {
 						</div>
 						<div>
 							<h1 className="text-xl font-semibold text-foreground">
-								Vendor Proposals
+								{proposals.length > 0 ? (
+									<span className="text-secondary-foreground font-medium">
+										{proposals.length} Proposals
+									</span>
+								) : (
+									"Vendor Proposals"
+								)}
 							</h1>
 							<p className="text-muted-foreground">{rfp.title}</p>
 						</div>
 					</div>
 
-					{proposals.length >= 2 && (
-						<Link
-							to={`/rfp/${id}/compare`}
-							className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-accent text-accent-foreground text-sm font-medium rounded-lg hover:bg-accent/90 transition-all"
+					<div>
+						{proposals.filter((p) => p.status === "parsed").length >= 2 && (
+							<Link
+								to={`/rfp/${id}/compare`}
+								className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-accent text-accent-foreground text-sm font-medium rounded-lg hover:bg-accent/90 transition-all"
+							>
+								<BarChart3 className="h-4 w-4" />
+								Compare Proposals
+							</Link>
+						)}
+						<button
+							onClick={handleCheckEmails}
+							disabled={checkingEmails}
+							className="inline-flex ml-3 items-center justify-center gap-2 px-5 py-2.5 bg-accent text-accent-foreground text-sm font-medium rounded-lg hover:bg-accent/90 transition-all disabled:opacity-50"
 						>
-							<BarChart3 className="h-4 w-4" />
-							Compare Proposals
-						</Link>
-					)}
+							<RefreshCw
+								className={`h-4 w-4 ${checkingEmails ? "animate-spin" : ""}`}
+							/>
+							{checkingEmails ? "Refreshing..." : "Refresh"}
+						</button>
+					</div>
 				</div>
 			</div>
 
 			<div className="space-y-4">
 				{proposals.map((proposal, index) => {
-					const status = "parsed";
+					const status = proposal.status || "parsed";
 
 					return (
 						<Link

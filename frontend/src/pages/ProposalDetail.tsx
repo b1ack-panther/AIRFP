@@ -41,12 +41,6 @@ const ProposalDetail = () => {
 		loadProposal();
 	}, [proposalId]);
 
-	const confidenceColor = (score?: number) => {
-		if (!score) return "text-muted-foreground";
-		if (score >= 90) return "text-status-awarded";
-		if (score >= 70) return "text-status-draft-foreground";
-		return "text-status-responses";
-	};
 
 	if (loading) {
 		return (
@@ -69,8 +63,6 @@ const ProposalDetail = () => {
 			</div>
 		);
 	}
-
-	const status = "parsed";
 
 	const totalCost = proposal.extracted_data.reduce(
 		(sum, item) => sum + item.price,
@@ -98,7 +90,7 @@ const ProposalDetail = () => {
 								{proposal.vendor?.name || "Unknown Vendor"}
 							</h1>
 							<div className="flex items-center gap-3 mt-1">
-								<StatusBadge status={status as any} />
+								<StatusBadge status={proposal.status as any} />
 								<span className="text-sm text-muted-foreground">
 									Submitted{" "}
 									{new Date(proposal.received_at).toLocaleDateString()}

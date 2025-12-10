@@ -30,7 +30,9 @@ const imapConfig = {
 
 exports.sendRfpEmails = async (rfp, vendors) => {
 	const subject = `RFP Invitation: ${rfp.title} [Ref:${rfp._id}]`;
-	const body = `Dear Vendor,\n\nWe are inviting you to submit a proposal.\n\nRequirements:\n${rfp.original_prompt}\n\nPlease reply to this email with your quote.`;
+	const body =
+		rfp.mail_body ||
+		`Dear Vendor,\n\nWe are inviting you to submit a proposal.\n\nRequirements:\n${rfp.original_prompt}\n\nPlease reply to this email with your quote.`;
 
 	const promises = vendors.map((vendor) => {
 		return transporter.sendMail({
@@ -48,151 +50,130 @@ exports.sendRfpEmails = async (rfp, vendors) => {
 exports.checkInboxForResponses = async () => {
 	console.log("Checking Inbox for Vendor Responses...");
 
-	imaps
-		.connect(imapConfig)
-		.then((connection) => {
-			connection.on("error", (err) => {
-				console.error("IMAP Connection Error:", err);
+	try {
+		const connection = await imaps.connect(imapConfig);
+		connection.on("error", (err) =>
+			console.error("IMAP Connection Error:", err)
+		);
+
+		await connection.openBox("INBOX");
+
+		const oneWeekAgo = new Date();
+		oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+		const searchCriteria = ["UNSEEN", ["SINCE", oneWeekAgo]];
+		const fetchOptions = {
+			bodies: ["HEADER.FIELDS (SUBJECT FROM)", "TEXT"],
+			markSeen: true,
+		};
+
+		const messages = await connection.search(searchCriteria, fetchOptions);
+		if (!messages.length) {
+			console.log("No new messages.");
+			return;
+		}
+
+		for (const item of messages) {
+			const textPart = item.parts.find((p) => p.which === "TEXT");
+			const headerPart = item.parts.find(
+				(p) => p.which === "HEADER.FIELDS (SUBJECT FROM)"
+			);
+			if (!textPart || !headerPart) continue;
+
+			const subject = headerPart.body.subject?.[0] || "";
+			const from = headerPart.body.from?.[0] || "";
+			const textBody = textPart.body;
+
+			const match = subject.match(/\[Ref:([a-f0-9]{24})\]/);
+			if (!match) continue;
+
+			const rfpId = match[1];
+			const rfp = await RFP.findById(rfpId);
+			if (!rfp) continue;
+
+			const cleanEmail =
+				(from.match(/<(.+)>/) || [null, from])[1]?.trim() || from.trim();
+
+			const vendor = await Vendor.findOne({ email: cleanEmail });
+			if (!vendor) {
+				console.log(`Vendor not found: ${cleanEmail}`);
+				continue;
+			}
+
+			console.log(`Parsing proposal from ${vendor.email}`);
+			const extractedData = await aiService.extractProposalData(
+				textBody,
+				rfp.requirements
+			);
+
+			const proposal = await Proposal.findOne({
+				rfp: rfp._id,
+				vendor: vendor._id,
 			});
-			return connection
-				.openBox("INBOX")
-				.then(() => {
-					const oneWeekAgo = new Date();
-					oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-					const searchCriteria = ["UNSEEN", ["SINCE", oneWeekAgo]];
-					const fetchOptions = {
-						bodies: ["HEADER.FIELDS (SUBJECT FROM)", "TEXT"],
-						markSeen: true,
-					};
 
-					return connection
-						.search(searchCriteria, fetchOptions)
-						.then((messages) => {
-							if (messages.length === 0) {
-								console.log("No new messages.");
-								return;
-							}
+			if (!proposal) {
+				console.log(`Proposal not found for vendor ${vendor.email}`);
+				continue;
+			}
 
-							const processingPromises = messages.map(async (item) => {
-								const textPart = item.parts.find(
-									(part) => part.which === "TEXT"
-								);
-								const headerPart = item.parts.find(
-									(part) => part.which === "HEADER.FIELDS (SUBJECT FROM)"
-								);
+			proposal.status = "parsed";
+			proposal.received_at = new Date();
+			proposal.extracted_data = extractedData.extracted_data;
+			proposal.compliance = extractedData.compliance;
+			proposal.timeline = extractedData.timeline;
+			await proposal.save();
 
-								if (!textPart || !headerPart) return;
+			if (rfp.status !== "responses") {
+				rfp.status = "responses";
+				await rfp.save();
+			}
 
-								const subject = headerPart.body.subject[0];
-								const from = headerPart.body.from[0];
-								const textBody = textPart.body;
+			const parsedCount = await Proposal.countDocuments({
+				rfp: rfp._id,
+				status: "parsed",
+			});
 
-								const match = subject.match(/\[Ref:([a-f0-9]{24})\]/);
-								if (match && match[1]) {
-									const rfpId = match[1];
-									console.log(`Found reply for RFP ID: ${rfpId} from ${from}`);
+			if (parsedCount >= 2) {
+				console.log(`Triggering AI comparison for RFP ${rfp._id}`);
+				const proposals = await Proposal.find({ rfp: rfp._id }).populate(
+					"vendor"
+				);
 
-									const rfp = await RFP.findById(rfpId);
-									if (rfp) {
-										console.log("Parsing email content with Gemini...");
-										const extractedData = await aiService.extractProposalData(
-											textBody,
-											rfp.requirements
-										);
+				const proposalsData = proposals.map((p) => ({
+					proposal_id: p._id.toString(),
+					vendor_name: p.vendor.name,
+					vendor_email: p.vendor.email,
+					total_cost: p.extracted_data.reduce(
+						(sum, item) => sum + item.price,
+						0
+					),
+					delivery_timeline: p.timeline,
+					compliance_score: p.compliance,
+					extracted_items: p.extracted_data,
+				}));
 
-										const emailMatch = from.match(/<(.+)>/) || [null, from];
-										const cleanEmail = emailMatch[1]
-											? emailMatch[1].trim()
-											: from.trim();
+				const result = await aiService.compareProposals(
+					{
+						requirements: rfp.requirements,
+						budget: rfp.total_budget,
+						timeline: rfp.timeline,
+					},
+					proposalsData
+				);
 
-										const vendor = await Vendor.findOne({ email: cleanEmail });
+				if (result?.best_proposal_id) {
+					rfp.best_proposal_id = result.best_proposal_id;
+					rfp.justification = result.justification;
+					await rfp.save();
+				}
+			}
+		}
 
-										if (vendor) {
-											await Proposal.create({
-												rfp: rfp._id,
-												vendor: vendor._id,
-												vendor_email: cleanEmail,
-												extracted_data: extractedData.extracted_data, // Access the array inside
-												compliance: extractedData.compliance,
-												timeline: extractedData.timeline,
-											});
-											if (rfp.status !== "responses") {
-												rfp.status = "responses";
-												await rfp.save();
-											}
-											console.log("Proposal Saved to Database!");
-
-											const proposalCount = await Proposal.countDocuments({
-												rfp: rfp._id,
-											});
-											if (proposalCount >= 2) {
-												console.log(
-													`Triggering AI Comparison for ${proposalCount} proposals...`
-												);
-												const allProposals = await Proposal.find({
-													rfp: rfp._id,
-												}).populate("vendor");
-
-												const proposalsData = allProposals.map((p) => ({
-													vendor_email: p.vendor.email,
-													total_cost: p.extracted_data.reduce(
-														(sum, item) => sum + item.price,
-														0
-													),
-													delivery_timeline: p.timeline,
-													compliance_score: p.compliance,
-													extracted_items: p.extracted_data,
-												}));
-
-												const rfpData = {
-													requirements: rfp.requirements,
-													budget: rfp.total_budget,
-													timeline: rfp.timeline,
-												};
-
-												const comparisonResult =
-													await aiService.compareProposals(
-														rfpData,
-														proposalsData
-													);
-
-												if (
-													comparisonResult &&
-													comparisonResult.best_vendor_email
-												) {
-													const bestVendor = await Vendor.findOne({
-														email: comparisonResult.best_vendor_email,
-													});
-													if (bestVendor) {
-														rfp.best_vendor_id = bestVendor._id;
-														rfp.justification = comparisonResult.justification;
-														await rfp.save();
-														console.log(
-															`AI Selected Winner: ${bestVendor.name}`
-														);
-													}
-												}
-											}
-										} else {
-											console.log(
-												`Vendor not found for email: ${cleanEmail}. Skipping proposal.`
-											);
-										}
-									}
-								}
-							});
-
-							return Promise.all(processingPromises);
-						});
-				})
-				.finally(() => {
-					connection.end();
-				});
-		})
-		.catch((err) => {
-			console.error("IMAP Error:", err);
-		})
-		.finally(() => {
-			console.log("IMAP connection closed.");
-		});
+		connection.end();
+	} catch (err) {
+		console.error("IMAP Processing Error:", err);
+	} finally {
+		console.log("IMAP job completed.");
+	}
 };
+

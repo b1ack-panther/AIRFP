@@ -23,6 +23,9 @@ app.get("/", (req, res) => {
 	res.send("AIRPF Backend is Running");
 });
 
+const errorHandler = require("./src/middleware/errorHandler");
+app.use(errorHandler);
+
 try {
 	app.listen(PORT, () => {
 		console.log(`Server running on port ${PORT}`);

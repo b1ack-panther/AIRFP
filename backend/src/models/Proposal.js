@@ -7,14 +7,19 @@ const ProposalSchema = new mongoose.Schema({
 		ref: "Vendor",
 		required: true,
 	},
+	status: {
+		type: String,
+		enum: ["sent", "parsed"],
+		default: "sent",
+	},
 	received_at: { type: Date, default: Date.now },
 	extracted_data: [
 		{
 			item: String,
+			specifications: String,
 			quantity: String,
 			price: Number,
 			warranty: String,
-			specifications: String,
 		},
 	],
 	compliance: Number,

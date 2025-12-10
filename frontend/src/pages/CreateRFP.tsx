@@ -6,12 +6,11 @@ import {
 	Package,
 	DollarSign,
 	Truck,
-	CreditCard,
-	Shield,
 	Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { api } from "@/services/api";
+import { toast } from "sonner";
 
 interface Message {
 	id: string;
@@ -42,6 +41,7 @@ const CreateRFP = () => {
 					updateRfpState(data);
 				} catch (error) {
 					console.error("Failed to load RFP", error);
+					toast.error("Failed to load RFP details");
 				}
 			}
 		};
@@ -94,9 +94,21 @@ const CreateRFP = () => {
 				navigate(`/create-rfp/${updatedRfp._id}`, { replace: true });
 			}
 
-			aiMessageContent = id
-				? "I've updated the RFP with your changes. Please review the structured data."
-				: "I've created a new RFP draft based on your requirements. You can see the details on the right. You can ask for further changes here to refine it.";
+			if (id) {
+				aiMessageContent =
+					"I've updated the RFP with your changes. Please review the structured data.";
+			} else {
+				aiMessageContent =
+					"I've created a new RFP draft based on your requirements. You can see the details on the right. You can ask for further changes here to refine it.";
+			}
+
+			if (updatedRfp.mail_body) {
+				aiMessageContent += `\n${updatedRfp.mail_body}`;
+			}
+
+			if (id) {
+				toast.success("RFP updated successfully");
+			}
 
 			updateRfpState(updatedRfp);
 
@@ -115,6 +127,7 @@ const CreateRFP = () => {
 					"Sorry, I encountered an error processing your request. Please try again.",
 			};
 			setMessages((prev) => [...prev, errorMessage]);
+			toast.error("Failed to generate RFP");
 		} finally {
 			setIsGenerating(false);
 		}

@@ -2,7 +2,6 @@ import axios from "axios";
 
 export interface Vendor {
 	_id: string;
-	id?: string;
 	name: string;
 	email: string;
 	category: string;
@@ -12,32 +11,25 @@ export interface Vendor {
 
 export interface RFP {
 	_id: string;
-	id?: string;
 	title: string;
-	name?: string;
-	description?: string;
-	original_prompt?: string;
-	status:
-		| "draft"
-		| "sent"
-		| "responses"
-		| "awarded"
-		| "processing"
-		| "parsed"
-		| "needs-review";
-	requirements: any[];
+	original_prompt: string;
+	status: string;
+	requirements: {
+		item: string;
+		quantity: string;
+		budget?: number;
+		specifications: string;
+		warranty?: string;
+	}[];
 	total_budget?: number;
-	budget?: string;
 	timeline?: string;
-	deliveryTimeline?: string;
-	warranty?: string;
 	createdAt: string;
 	updatedAt: string;
-	lastUpdated?: string;
-	vendors?: string[];
-	vendorCount?: number;
-	best_vendor_id?: string;
+	vendors?: string[]; // Kept for legacy or if we want to map mapped vendors
+	proposals?: Proposal[]; // Now we have full proposals
+	best_proposal_id?: string;
 	justification?: string[];
+	mail_body?: string;
 }
 
 export interface Proposal {
@@ -60,36 +52,22 @@ export interface Proposal {
 	compliance: number;
 	received_at: string;
 	timeline?: string;
+	status: "sent" | "parsed";
 }
 
 const API_URL = "http://localhost:5000/api";
 
 export const api = {
-	getAllRFPs: async (): Promise<RFP[]> => {
+	getAllRFPs: async (status?: string): Promise<RFP[]> => {
 		const response = await axios.get(`${API_URL}/rfps`);
-
-		return response.data.map((rfp: any) => ({
-			...rfp,
-			id: rfp._id,
-			name: rfp.title,
-			lastUpdated: new Date(rfp.updatedAt).toLocaleDateString(),
-			vendorCount: rfp.vendors?.length || 0,
-			status: rfp.status.toLowerCase() as RFP["status"],
-			items: rfp.requirements.map((req: any) => ({
-				name: req.item,
-				quantity: req.quantity,
-				specifications: req.specifications || "",
-				budget: req.budget,
-				totalPrice:
-					req.total_price ||
-					(req.budget && !isNaN(parseFloat(req.quantity))
-						? req.budget * parseFloat(req.quantity)
-						: 0),
-				warranty: req.warranty || rfp.warranty || "",
-			})),
-			description: rfp.original_prompt,
-			deliveryTimeline: rfp.timeline,
-		}));
+		let data = response.data;
+		if (status) {
+			const lowerStatus = status.toLowerCase();
+			data = data.filter(
+				(rfp: any) => (rfp.status || "DRAFT").toLowerCase() === lowerStatus
+			);
+		}
+		return data;
 	},
 
 	getRFP: async (id: string) => {
@@ -113,6 +91,11 @@ export const api = {
 		const response = await axios.post(`${API_URL}/rfps/${id}/send`, {
 			vendorIds: vendorIds,
 		});
+		return response.data;
+	},
+
+	checkEmails: async () => {
+		const response = await axios.post(`${API_URL}/rfps/check-emails`);
 		return response.data;
 	},
 

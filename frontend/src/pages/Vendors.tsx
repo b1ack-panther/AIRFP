@@ -10,6 +10,7 @@ import {
 	Building2,
 } from "lucide-react";
 import { api, Vendor } from "@/services/api";
+import { toast } from "sonner";
 
 const Vendors = () => {
 	const [vendors, setVendors] = useState<Vendor[]>([]);
@@ -30,6 +31,7 @@ const Vendors = () => {
 			setVendors(data);
 		} catch (error) {
 			console.error("Failed to fetch vendors", error);
+			toast.error("Failed to fetch vendors");
 		} finally {
 			setLoading(false);
 		}
@@ -72,16 +74,21 @@ const Vendors = () => {
 		e.preventDefault();
 
 		try {
-			if (editingVendor && editingVendor.id) {
-				await api.updateVendor(editingVendor.id, formData);
+			if (editingVendor && editingVendor._id) {
+				await api.updateVendor(editingVendor._id, formData);
 			} else {
 				await api.createVendor(formData);
 			}
 			await fetchVendors();
 			handleCloseModal();
+			toast.success(
+				editingVendor
+					? "Vendor updated successfully"
+					: "Vendor created successfully"
+			);
 		} catch (error) {
 			console.error("Failed to save vendor", error);
-			alert("Failed to save vendor");
+			toast.error("Failed to save vendor");
 		}
 	};
 
@@ -89,9 +96,10 @@ const Vendors = () => {
 		try {
 			await api.deleteVendor(vendorId);
 			await fetchVendors();
+			toast.success("Vendor deleted successfully");
 		} catch (error) {
 			console.error("Failed to delete vendor", error);
-			alert("Failed to delete vendor");
+			toast.error("Failed to delete vendor");
 		}
 	};
 
@@ -132,7 +140,7 @@ const Vendors = () => {
 						<tbody className="divide-y divide-border">
 							{vendors.map((vendor) => (
 								<tr
-									key={vendor.id}
+									key={vendor._id}
 									className="hover:bg-muted/30 transition-colors"
 								>
 									<td className="px-6 py-4">
@@ -181,7 +189,7 @@ const Vendors = () => {
 												<Pencil className="h-4 w-4" />
 											</button>
 											<button
-												onClick={() => handleDelete(vendor.id)}
+												onClick={() => handleDelete(vendor._id)}
 												className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
 											>
 												<Trash2 className="h-4 w-4" />

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import {
 	ArrowLeft,
 	Package,
@@ -16,10 +16,10 @@ import {
 } from "lucide-react";
 import { api, Vendor } from "@/services/api";
 import StatusBadge from "@/components/ui/StatusBadge";
+import { toast } from "sonner";
 
 const RFPDetail = () => {
 	const { id } = useParams<{ id: string }>();
-	const navigate = useNavigate();
 	const [rfp, setRfp] = useState<any>(null);
 	const [vendors, setVendors] = useState<Vendor[]>([]);
 	const [loading, setLoading] = useState(true);
@@ -38,29 +38,22 @@ const RFPDetail = () => {
 					api.getAllVendors(),
 				]);
 
-				setRfp({
-					...rfpData,
-					name: rfpData.title,
-					description: rfpData.original_prompt,
-					items: rfpData.requirements.map((req: any) => ({
-						name: req.item,
-						quantity: req.quantity,
-						specifications: req.specifications || "",
-						budget: req.budget,
-						warranty: req.warranty,
-					})),
-					deliveryTimeline: rfpData.timeline,
-					warranty: rfpData.requirements.find((r: any) => r.warranty)?.warranty,
-					vendorCount: rfpData.vendors?.length || 0,
-					vendors: rfpData.vendors || [],
-				});
+				setRfp(rfpData);
 				setVendors(vendorsData);
 
-				if (rfpData.vendors) {
+				if (rfpData.proposals) {
+					// Extract vendor IDs from the populated proposals
+					const existingVendorIds = rfpData.proposals.map(
+						(p: any) => p.vendor._id
+					);
+					setSelectedVendorIds(existingVendorIds);
+				} else if (rfpData.vendors) {
+					// Fallback for old RFPs
 					setSelectedVendorIds(rfpData.vendors);
 				}
 			} catch (error) {
 				console.error("Failed to fetch data", error);
+				toast.error("Failed to load RFP details");
 			} finally {
 				setLoading(false);
 			}
@@ -82,7 +75,8 @@ const RFPDetail = () => {
 	const handleSendRFP = async () => {
 		setSending(true);
 		try {
-			const initialVendorIds = rfp.vendors || [];
+			const initialVendorIds =
+				rfp.proposals?.map((p: any) => p.vendor._id) || rfp.vendors || [];
 			const newVendorIds = selectedVendorIds.filter(
 				(id) => !initialVendorIds.includes(id)
 			);
@@ -93,21 +87,25 @@ const RFPDetail = () => {
 				const updatedRfp = await api.getRFP(id!);
 				setRfp((prev) => ({
 					...prev,
-					vendors: updatedRfp.vendors,
+					vendors: updatedRfp.vendors, // Should technically wait for proposals update, but this might be enough for now or we rely on re-fetch
+					proposals: updatedRfp.proposals, // If backend returns it
 					status: "sent",
 				}));
+				toast.success("RFP sent to selected vendors");
 			}
 			setIsVendorModalOpen(false);
 		} catch (error) {
 			console.error(error);
-			alert("Failed to send RFP");
+			toast.error("Failed to send RFP");
 		} finally {
 			setSending(false);
 		}
 	};
 
 	const toggleVendor = (vendorId: string) => {
-		const isAlreadySent = rfp.vendors?.includes(vendorId);
+		const isAlreadySent =
+			rfp.proposals?.some((p: any) => p.vendor._id === vendorId) ||
+			rfp.vendors?.includes(vendorId);
 		if (isAlreadySent) return;
 
 		if (selectedVendorIds.includes(vendorId)) {
@@ -141,7 +139,7 @@ const RFPDetail = () => {
 						</div>
 						<div>
 							<h1 className="text-xl font-semibold text-foreground">
-								{rfp.name}
+								{rfp.title}
 							</h1>
 							<div className="flex items-center gap-3 mt-1">
 								<StatusBadge status={rfp.status} />
@@ -165,25 +163,19 @@ const RFPDetail = () => {
 							<Eye className="h-4 w-4" />
 							View Responses
 						</Link>
-						<Link
-							to={`/rfp/${id}/compare`}
-							className="min-w-max flex items-center justify-center gap-2 px-4 py-2.5 bg-secondary text-secondary-foreground font-medium rounded-lg hover:bg-secondary/80 transition-colors"
-						>
-							Compare Responses
-						</Link>
 					</div>
 				</div>
 			</div>
 
 			<div className="lg:col-span-2 space-y-6">
-				{rfp.description && (
+				{rfp.original_prompt && (
 					<div className="card-elevated p-6">
 						<h2 className="font-semibold text-foreground mb-3">Description</h2>
-						<p className="text-muted-foreground">{rfp.description}</p>
+						<p className="text-muted-foreground">{rfp.original_prompt}</p>
 					</div>
 				)}
 
-				{rfp.items && rfp.items.length > 0 && (
+				{rfp.requirements && rfp.requirements.length > 0 && (
 					<div className="card-elevated p-6">
 						<div className="flex items-center gap-2 mb-4">
 							<Package className="h-5 w-5 text-primary" />
@@ -201,10 +193,10 @@ const RFPDetail = () => {
 									</tr>
 								</thead>
 								<tbody className="divide-y divide-border">
-									{rfp.items.map((item, i) => (
+									{rfp.requirements.map((item: any, i: number) => (
 										<tr key={i}>
 											<td className="py-3 text-sm font-medium text-foreground">
-												{item.name}
+												{item.item}
 											</td>
 											<td className="py-3 text-sm text-muted-foreground">
 												{item.quantity}
@@ -233,7 +225,7 @@ const RFPDetail = () => {
 						</div>
 					)}
 
-					{rfp.deliveryTimeline && (
+					{rfp.timeline && (
 						<div className="card-elevated p-4">
 							<div className="flex items-center gap-2 mb-2">
 								<Truck className="h-4 w-4 text-primary" />
@@ -242,7 +234,7 @@ const RFPDetail = () => {
 								</span>
 							</div>
 							<p className="text-lg font-semibold text-foreground">
-								{rfp.deliveryTimeline}
+								{rfp.timeline}
 							</p>
 						</div>
 					)}
@@ -273,6 +265,18 @@ const RFPDetail = () => {
 						</div>
 					)}
 				</div>
+
+				{rfp.mail_body && (
+					<div className="card-elevated p-6">
+						<div className="flex items-center gap-2 mb-4">
+							<Mail className="h-5 w-5 text-primary" />
+							<h2 className="font-semibold text-foreground">Email Preview</h2>
+						</div>
+						<div className="bg-muted/50 p-4 rounded-lg border border-border whitespace-pre-wrap font-mono text-sm text-muted-foreground">
+							{rfp.mail_body}
+						</div>
+					</div>
+				)}
 			</div>
 
 			{isVendorModalOpen && (
@@ -314,14 +318,17 @@ const RFPDetail = () => {
 
 						<div className="flex-1 overflow-y-auto p-2">
 							{filteredVendors.map((vendor) => {
-								const isSelected = selectedVendorIds.includes(vendor.id);
-								const isLocked = rfp.vendors?.includes(vendor.id);
+								const isSelected = selectedVendorIds.includes(vendor._id);
+								const isLocked =
+									rfp.proposals?.some(
+										(p: any) => p.vendor._id === vendor._id
+									) || rfp.vendors?.includes(vendor._id);
 
 								return (
 									<div
-										key={vendor.id}
+										key={vendor._id}
 										aria-disabled={isLocked}
-										onClick={() => !isLocked && toggleVendor(vendor.id)}
+										onClick={() => !isLocked && toggleVendor(vendor._id)}
 										className={`flex items-center gap-4 p-3 rounded-lg border mb-2 cursor-pointer transition-all ${
 											isSelected
 												? "bg-primary/5 border-primary/30"
@@ -386,8 +393,12 @@ const RFPDetail = () => {
 						<div className="p-4 border-t border-border bg-muted/30 flex justify-between items-center">
 							<span className="text-sm text-muted-foreground">
 								{
-									selectedVendorIds.filter((id) => !rfp.vendors?.includes(id))
-										.length
+									selectedVendorIds.filter((id) => {
+										const linked =
+											rfp.proposals?.some((p: any) => p.vendor._id === id) ||
+											rfp.vendors?.includes(id);
+										return !linked;
+									}).length
 								}{" "}
 								vendor(s) selected
 							</span>
@@ -402,8 +413,12 @@ const RFPDetail = () => {
 									onClick={handleSendRFP}
 									disabled={
 										sending ||
-										selectedVendorIds.filter((id) => !rfp.vendors?.includes(id))
-											.length === 0
+										selectedVendorIds.filter((id) => {
+											const linked =
+												rfp.proposals?.some((p: any) => p.vendor._id === id) ||
+												rfp.vendors?.includes(id);
+											return !linked;
+										}).length === 0
 									}
 									className="flex items-center gap-2 px-6 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
 								>

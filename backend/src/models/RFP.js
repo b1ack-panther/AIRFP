@@ -29,14 +29,14 @@ const RfpSchema = new mongoose.Schema(
 
 		requirements: [RequirementSchema],
 
-		vendors: [
+		proposals: [
 			{
 				type: mongoose.Schema.Types.ObjectId,
-				ref: "Vendor",
+				ref: "Proposal",
 			},
 		],
 
-		best_vendor_id: { type: mongoose.Schema.Types.ObjectId, ref: "Vendor" },
+		best_proposal_id: { type: mongoose.Schema.Types.ObjectId, ref: "Proposal" },
 		justification: { type: [String], default: [] },
 	},
 	{

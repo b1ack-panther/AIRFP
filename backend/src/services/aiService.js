@@ -12,7 +12,7 @@ const SchemaType = {
 const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 exports.generateRfpData = async (userPrompt, currentData = null) => {
-	const schema = {
+	const rfpSchema = {
 		type: SchemaType.OBJECT,
 		properties: {
 			title: { type: SchemaType.STRING },
@@ -53,28 +53,25 @@ exports.generateRfpData = async (userPrompt, currentData = null) => {
 				type: SchemaType.STRING,
 				description: "Timeline for the project (e.g., 1 month, 2 weeks)",
 			},
+			mail_body: {
+				type: SchemaType.STRING,
+				description:
+					"Professional email body inviting vendors for detailed quotation for the requirements.",
+			},
 		},
-		required: ["title", "requirements", "timeline"],
+		required: ["title", "requirements", "timeline", "mail_body"],
 	};
 
 	let systemInstruction = `You are a Procurement Architect. 
       
       1. Analyze the user's prompt.
-      2. Extract a list of requirements (line items).
-      3. For each item, extract the quantity, technical specifications, warranty requirements, and any specific budget mentioned.
-      4. If a global budget is mentioned, set 'total_budget'.
-      
-      Example:
-      User: "I need 10 laptops ($1000 each) with 16GB RAM and 5 monitors. Total budget $15000. 1 year warranty."
-      Output:
-      {
-        "title": "Procurement for Laptops and Monitors",
-        "total_budget": 15000,
-        "requirements": [
-            { "item": "Laptops", "quantity": "10", "budget": 1000, "specifications": "16GB RAM", "warranty": "1 year" },
-            { "item": "Monitors", "quantity": "5", "budget": null, "specifications": "", "warranty": "1 year" }
-        ]
-      }`;
+      2. Extract a list of requirements (line items), including quantities, specs, warranty, and item budgets.
+      3. If a global budget is mentioned, set 'total_budget'.
+      4. Generate a professional 'mail_body' that:
+         - Is polite and professional.
+         - clearly tests the requirements.
+         - avoids placeholders like [Your Name].
+      `;
 
 	let userContent = userPrompt;
 
@@ -83,18 +80,16 @@ exports.generateRfpData = async (userPrompt, currentData = null) => {
         You are given an EXISTING RFP data structure and a user's REQUEST TO MODIFY it.
         
         1. Analyze the existing RFP data and the user's modification request.
-        2. Apply the requested changes (add items, remove items, update quantities/specs/budgets).
+        2. Apply the requested changes (add/remove items, update quantities/specs/budgets).
         3. Maintain the integrity of unchanged items.
-        4. Return the FULLY UPDATED RFP structure matching the schema.
-        `;
+        4. Regenerate the 'mail_body' to reflect the updated requirements.
+        5. Return the FULLY UPDATED RFP structure.`;
 
-		userContent = `
-        CURRENT RFP DATA:
-        ${JSON.stringify(currentData, null, 2)}
-
-        USER MODIFICATION REQUEST:
-        "${userPrompt}"
-        `;
+		userContent = `CURRENT RFP DATA:\n${JSON.stringify(
+			currentData,
+			null,
+			2
+		)}\n\nUSER MODIFICATION REQUEST:\n"${userPrompt}"`;
 	}
 
 	const response = await genAI.models.generateContent({
@@ -103,7 +98,7 @@ exports.generateRfpData = async (userPrompt, currentData = null) => {
 		config: {
 			systemInstruction: systemInstruction,
 			responseMimeType: "application/json",
-			responseSchema: schema,
+			responseSchema: rfpSchema,
 			temperature: 0.1,
 		},
 	});
@@ -187,9 +182,9 @@ exports.compareProposals = async (rfpData, proposalsData) => {
 	const schema = {
 		type: SchemaType.OBJECT,
 		properties: {
-			best_vendor_email: {
+			best_proposal_id: {
 				type: SchemaType.STRING,
-				description: "Email of the selected best vendor",
+				description: "The proposal_id of the selected best proposal",
 			},
 			justification: {
 				type: SchemaType.ARRAY,
@@ -198,7 +193,7 @@ exports.compareProposals = async (rfpData, proposalsData) => {
 					"3+ bullet points justifying the selection based on compliance and value",
 			},
 		},
-		required: ["best_vendor_email", "justification"],
+		required: ["best_proposal_id", "justification"],
 	};
 
 	const prompt = `
@@ -208,10 +203,11 @@ exports.compareProposals = async (rfpData, proposalsData) => {
     RFP REQUIREMENTS:
     ${JSON.stringify(rfpData, null, 2)}
 
-    PROPOSALS:
+    PROPOSALS (Each has a 'proposal_id' and 'vendor_name'):
     ${JSON.stringify(proposalsData, null, 2)}
 
-    Output the winner's email and 3+ detailed justification points explaining why they have the highest compliance/value.
+    Output the winner's 'best_proposal_id' (extracted from the input proposal data) and 3+ detailed justification points explaining why they have the highest compliance/value.
+    IMPORTANT: In the justification bullet points, refer to the vendor by their 'vendor_name'.
     `;
 
 	const response = await genAI.models.generateContent({

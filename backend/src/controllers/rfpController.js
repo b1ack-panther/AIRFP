@@ -37,6 +37,7 @@ exports.createRfp = async (req, res) => {
 			rfp.requirements = aiResponse.requirements;
 			rfp.total_budget = aiResponse.total_budget;
 			rfp.timeline = aiResponse.timeline;
+			rfp.mail_body = aiResponse.mail_body;
 		} else {
 			rfp = new RFP({
 				title: aiResponse.title,
@@ -45,6 +46,7 @@ exports.createRfp = async (req, res) => {
 				total_budget: aiResponse.total_budget,
 				timeline: aiResponse.timeline,
 				status: "DRAFT",
+				mail_body: aiResponse.mail_body,
 			});
 		}
 
@@ -59,7 +61,10 @@ exports.createRfp = async (req, res) => {
 exports.getRfp = async (req, res) => {
 	try {
 		const { id } = req.params;
-		const rfp = await RFP.findById(id);
+		const rfp = await RFP.findById(id).populate({
+			path: "proposals",
+			populate: { path: "vendor" },
+		});
 		if (!rfp) return res.status(404).json({ error: "RFP not found" });
 		res.json(rfp);
 	} catch (err) {
@@ -75,16 +80,35 @@ exports.sendRfp = async (req, res) => {
 		const rfp = await RFP.findById(id);
 		if (!rfp) return res.status(404).json({ error: "RFP not found" });
 
-		vendorIds = vendorIds.filter((id) => !rfp.vendors.includes(id));
+		// Populate proposals to check existing vendors
+		await rfp.populate({
+			path: "proposals",
+			populate: { path: "vendor" },
+		});
+
+		const existingVendorIds = rfp.proposals.map((p) => p.vendor._id.toString());
+		vendorIds = vendorIds.filter((id) => !existingVendorIds.includes(id));
 		const vendors = await Vendor.find({ _id: { $in: vendorIds } });
 
 		if (vendors.length === 0) {
 			return res.status(400).json({ error: "No valid vendors selected" });
 		}
 
-		rfp.vendors.push(...vendorIds);
+		// rfp.vendors.push is removed as we now track proposals
 		await emailService.sendRfpEmails(rfp, vendors);
-		rfp.status = "SENT";
+
+		const proposals = vendors.map((vendor) => ({
+			rfp: rfp._id,
+			vendor: vendor._id,
+			status: "sent",
+			received_at: new Date(),
+		}));
+		const savedProposals = await Proposal.insertMany(proposals);
+
+		// Link proposals to RFP
+		rfp.proposals.push(...savedProposals.map((p) => p._id));
+
+		rfp.status = "sent";
 		await rfp.save();
 
 		res.json({ message: `Sent to ${vendors.length} vendors` });
@@ -124,16 +148,6 @@ exports.getAllRfps = async (req, res) => {
 	}
 };
 
-exports.getAllVendors = async (req, res) => {
-	try {
-		const vendors = await Vendor.find();
-		return res.json(vendors);
-	} catch (error) {
-		console.log(error);
-		res.status(500).json({ error: error?.message });
-	}
-};
-
 exports.triggerEmailCheck = async (req, res) => {
 	try {
 		await emailService.checkInboxForResponses();
@@ -141,26 +155,5 @@ exports.triggerEmailCheck = async (req, res) => {
 	} catch (error) {
 		console.error(error);
 		res.status(500).json({ error: "Failed to check emails" });
-	}
-};
-
-exports.refineRfp = async (req, res) => {
-	try {
-		const { id } = req.params;
-		const { prompt } = req.body;
-
-		if (!prompt) return res.status(400).json({ error: "Prompt is required" });
-
-		const aiResponse = await aiService.generateRfpData(prompt, currentData);
-
-		rfp.title = aiResponse.title;
-		rfp.requirements = aiResponse.requirements;
-		rfp.total_budget = aiResponse.total_budget;
-
-		await rfp.save();
-		res.json(rfp);
-	} catch (err) {
-		console.error("Refine Error:", err);
-		res.status(500).json({ error: "Failed to refine RFP" });
 	}
 };

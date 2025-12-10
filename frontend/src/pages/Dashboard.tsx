@@ -64,13 +64,17 @@ const Dashboard = () => {
 					},
 					{
 						label: "Draft",
-						value: recentRFPs.filter((r) => r.status === "draft").length,
+						value: recentRFPs.filter(
+							(r) => (r.status || "DRAFT").toUpperCase() === "DRAFT"
+						).length,
 						color: "text-status-draft-foreground",
 					},
 					{
 						label: "In Progress",
 						value: recentRFPs.filter(
-							(r) => r.status === "sent" || r.status === "responses"
+							(r) =>
+								(r.status || "").toUpperCase() === "SENT" ||
+								(r.status || "").toUpperCase() === "RESPONSES"
 						).length,
 						color: "text-status-sent",
 					},
@@ -96,8 +100,8 @@ const Dashboard = () => {
 				<div className="divide-y divide-border">
 					{recentRFPs.map((rfp, index) => (
 						<Link
-							key={rfp.id}
-							to={`/rfp/${rfp.id}`}
+							key={rfp._id}
+							to={`/rfp/${rfp._id}`}
 							className="block hover:bg-muted/30 transition-colors"
 							style={{ animationDelay: `${index * 50}ms` }}
 						>
@@ -108,11 +112,24 @@ const Dashboard = () => {
 									</div>
 									<div className="min-w-0">
 										<p className="font-medium text-foreground truncate">
-											{rfp.name}
+											{rfp.title}
 										</p>
 										<p className="text-sm text-muted-foreground md:hidden">
-											{rfp.vendorCount} vendors • {rfp.lastUpdated}
+											{rfp.proposals?.length || rfp.vendors?.length || 0}{" "}
+											vendors • {new Date(rfp.createdAt).toLocaleDateString()}
 										</p>
+										<div className="flex items-center justify-between text-sm md:hidden">
+											<span className="text-muted-foreground">
+												${rfp.total_budget?.toLocaleString() ?? "-"}
+											</span>
+											<div className="flex items-center gap-1 text-muted-foreground">
+												<Users className="h-4 w-4" />
+												<span>
+													{rfp.proposals?.length || rfp.vendors?.length || 0}{" "}
+													vendors
+												</span>
+											</div>
+										</div>
 									</div>
 								</div>
 
@@ -122,12 +139,14 @@ const Dashboard = () => {
 
 								<div className="hidden md:flex md:col-span-2 items-center gap-2 text-sm text-muted-foreground">
 									<Users className="h-4 w-4" />
-									<span>{rfp.vendorCount} vendors</span>
+									<span>
+										{rfp.proposals?.length || rfp.vendors?.length || 0} vendors
+									</span>
 								</div>
 
 								<div className="hidden md:flex md:col-span-2 items-center gap-2 text-sm text-muted-foreground">
 									<Calendar className="h-4 w-4" />
-									<span>{rfp.lastUpdated}</span>
+									<span>{new Date(rfp.updatedAt).toLocaleDateString()}</span>
 								</div>
 
 								<div className="hidden md:flex md:col-span-1 justify-end">

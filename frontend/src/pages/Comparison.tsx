@@ -91,9 +91,9 @@ const Comparison = () => {
 		);
 	}
 
-	const selectedProposal = rfp?.best_vendor_id
-		? proposals.find((p) => p.vendor?._id === rfp.best_vendor_id)
-		: sortedByValue[0];
+	const selectedProposal = proposals.find(
+		(p) => p._id === rfp.best_proposal_id
+	);
 
 	return (
 		<div className="page-container animate-fade-in">
@@ -229,59 +229,70 @@ const Comparison = () => {
 					</div>
 				)}
 			</div>
-			{selectedProposal && (
-				<>
-					<div className="card-elevated p-4 mt-6 border-2 border-status-awarded/30">
-						<div className="flex items-center gap-2 text-status-awarded mb-4">
-							<Trophy className="h-5 w-5" />
-							<span className="text-sm font-medium">Selected Vendor</span>
+			{selectedProposal ? (
+				<div className="card-elevated p-4 mt-6 border-2 border-status-awarded/30">
+					<div className="flex items-center gap-2 text-status-awarded mb-4">
+						<Trophy className="h-5 w-5" />
+						<span className="text-sm font-medium">Selected Vendor</span>
+					</div>
+
+					<div className="flex items-center gap-4 mb-3">
+						<div className="h-14 w-14 rounded-xl bg-primary/10 flex items-center justify-center">
+							<Building2 className="h-7 w-7 text-primary" />
 						</div>
-
-						<div className="flex items-center gap-4 mb-3">
-							<div className="h-14 w-14 rounded-xl bg-primary/10 flex items-center justify-center">
-								<Building2 className="h-7 w-7 text-primary" />
-							</div>
-							<div>
-								<h2 className="text-xl font-semibold text-foreground">
-									{selectedProposal.vendor?.name}
-								</h2>
-								<p className="text-muted-foreground">
-									{selectedProposal.vendor?.category}
-								</p>
-							</div>
-						</div>
-
-						<div className="p-3 mb-6">
-							<div className="flex items-center gap-2 mb-6">
-								<Sparkles className="h-5 w-5 text-accent" />
-								<h3 className="font-semibold text-foreground">
-									AI Justification
-								</h3>
-							</div>
-
-							<div className="prose prose-sm max-w-none">
-								<ul className="space-y-2">
-									{rfp.justification && rfp.justification.length > 0 ? (
-										rfp.justification.map((point, index) => (
-											<li key={index} className="flex items-start gap-2">
-												<CheckCircle className="h-4 w-4 text-status-awarded flex-shrink-0 mt-1" />
-												<span className="text-muted-foreground">{point}</span>
-											</li>
-										))
-									) : (
-										<li className="flex items-start gap-2">
-											<span className="text-muted-foreground">
-												AI analysis is pending more proposals or requires
-												processing. The recommendation above is a preliminary
-												estimate based on cost and value.
-											</span>
-										</li>
-									)}
-								</ul>
-							</div>
+						<div>
+							<h2 className="text-xl font-semibold text-foreground">
+								{selectedProposal.vendor?.name}
+							</h2>
+							<p className="text-muted-foreground">
+								{selectedProposal.vendor?.category}
+							</p>
 						</div>
 					</div>
-				</>
+
+					<div className="p-3 mb-6">
+						<div className="flex items-center gap-2 mb-6">
+							<Sparkles className="h-5 w-5 text-accent" />
+							<h3 className="font-semibold text-foreground">
+								AI Justification
+							</h3>
+						</div>
+
+						<div className="prose prose-sm max-w-none">
+							<ul className="space-y-2">
+								{rfp.justification && rfp.justification.length > 0 ? (
+									rfp.justification.map((point, index) => (
+										<li key={index} className="flex items-start gap-2">
+											<CheckCircle className="h-4 w-4 text-status-awarded flex-shrink-0 mt-1" />
+											<span className="text-muted-foreground">{point}</span>
+										</li>
+									))
+								) : (
+									<li className="flex items-start gap-2">
+										<span className="text-muted-foreground">
+											AI analysis is pending more proposals or requires
+											processing. The recommendation above is a preliminary
+											estimate based on cost and value.
+										</span>
+									</li>
+								)}
+							</ul>
+						</div>
+					</div>
+				</div>
+			) : (
+				proposals.length > 0 && (
+					<div className="card-elevated p-8 mt-6 text-center border-dashed border-2 border-border">
+						<Sparkles className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
+						<h3 className="text-lg font-medium text-foreground mb-2">
+							Analysis Pending
+						</h3>
+						<p className="text-muted-foreground max-w-md mx-auto">
+							The AI is waiting for more proposals or is currently processing
+							the data to find the best vendor.
+						</p>
+					</div>
+				)
 			)}
 		</div>
 	);
